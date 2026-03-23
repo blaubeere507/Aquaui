@@ -555,7 +555,7 @@ function AquaUI:CreateWindow(config)
             GroupBG.BackgroundColor3 = T.ElementBG
             GroupBG.BorderSizePixel = 0
             GroupBG.LayoutOrder = 1
-            GroupBG.ClipsDescendants = true
+            GroupBG.ClipsDescendants = false
             Corner(GroupBG, T.CornerRadiusSm)
             Stroke(GroupBG, T.GlassBorder, 1, 0.4)
             GroupBG.Parent = SectionFrame
@@ -1318,33 +1318,46 @@ function AquaUI:Notify(config)
 
     local ScreenGui = GetScreenGui()
 
+    -- Use a fixed-height layout so progress bar is always at a known offset
+    -- Title row: 44px, optional desc below, then 14px bottom padding + 2px bar + 8px below bar
+    local titleH  = 44
+    local descH   = 0
+    local bottomH = 14  -- gap below desc before bar
+
+    -- Measure desc height roughly (we just reserve a fixed block; TextWrapped handles wrapping)
+    if desc ~= "" then
+        -- Approximate: 12px font, ~40 chars per line at 272px width ≈ ceil(#desc/40)*16
+        local lines = math.max(1, math.ceil(#desc / 42))
+        descH = lines * 16 + 4
+    end
+
+    local totalH = titleH + descH + bottomH + 2 + 8  -- bar is 2px, 8px gap below
+
     local Notif = Instance.new("Frame")
-    Notif.Size = UDim2.new(0, 300, 0, 0)
+    Notif.Size = UDim2.new(0, 300, 0, totalH)
     Notif.AnchorPoint = Vector2.new(0, 1)
     Notif.Position = UDim2.new(1, 10, 1, -24)
     Notif.BackgroundColor3 = Color3.new(1, 1, 1)
     Notif.BorderSizePixel = 0
-    Notif.AutomaticSize = Enum.AutomaticSize.Y
     Notif.ClipsDescendants = false
     Corner(Notif, T.CornerRadiusSm)
     Stroke(Notif, T.GlassBorder, 1, 0.3)
     Shadow(Notif, 24, 0.72)
     Notif.Parent = ScreenGui
 
-    -- Accent dot
+    -- Accent dot — vertically centred in the 44px title row
     local AccentDot = Instance.new("Frame")
     AccentDot.Size = UDim2.new(0, 8, 0, 8)
-    AccentDot.Position = UDim2.new(0, 14, 0, 0)
-    AccentDot.AnchorPoint = Vector2.new(0, 0.5)
+    AccentDot.Position = UDim2.new(0, 14, 0, 18)   -- 44/2 - 4 = 18
     AccentDot.BackgroundColor3 = accent
     AccentDot.BorderSizePixel = 0
-    -- Will be repositioned after layout
     Corner(AccentDot, UDim.new(1, 0))
     AccentDot.Parent = Notif
 
+    -- Title — vertically centred in 44px row
     local NTitle = Instance.new("TextLabel")
-    NTitle.Size = UDim2.new(1, -36, 0, 20)
-    NTitle.Position = UDim2.new(0, 30, 0, 12)
+    NTitle.Size = UDim2.new(1, -36, 0, 18)
+    NTitle.Position = UDim2.new(0, 30, 0, 13)   -- (44-18)/2 = 13
     NTitle.BackgroundTransparency = 1
     NTitle.Text = title
     NTitle.TextColor3 = T.TextPrimary
@@ -1353,28 +1366,25 @@ function AquaUI:Notify(config)
     NTitle.TextXAlignment = Enum.TextXAlignment.Left
     NTitle.Parent = Notif
 
-    -- Reposition dot vertically centred with title
-    AccentDot.Position = UDim2.new(0, 14, 0, 20)
-
     if desc ~= "" then
         local NDesc = Instance.new("TextLabel")
-        NDesc.Size = UDim2.new(1, -28, 0, 0)
-        NDesc.Position = UDim2.new(0, 14, 0, 34)
+        NDesc.Size = UDim2.new(1, -28, 0, descH)
+        NDesc.Position = UDim2.new(0, 14, 0, titleH)
         NDesc.BackgroundTransparency = 1
         NDesc.Text = desc
         NDesc.TextColor3 = T.TextSecondary
         NDesc.Font = T.FontRegular
         NDesc.TextSize = 12
         NDesc.TextWrapped = true
-        NDesc.AutomaticSize = Enum.AutomaticSize.Y
         NDesc.TextXAlignment = Enum.TextXAlignment.Left
         NDesc.Parent = Notif
     end
 
-    -- Progress bar
+    -- Progress bar — fixed Y offset from top, always below content
+    local barY = titleH + descH + 6
     local ProgBG = Instance.new("Frame")
     ProgBG.Size = UDim2.new(1, -28, 0, 2)
-    ProgBG.Position = UDim2.new(0, 14, 1, -10)
+    ProgBG.Position = UDim2.new(0, 14, 0, barY)
     ProgBG.BackgroundColor3 = Color3.fromRGB(209, 209, 214)
     ProgBG.BorderSizePixel = 0
     Corner(ProgBG, UDim.new(1, 0))
